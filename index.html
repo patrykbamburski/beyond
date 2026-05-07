@@ -20,63 +20,30 @@
 html,body{height:100%;overscroll-behavior:none;}
 body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:15px;}
 
-#topbar{
-  position:sticky;top:0;z-index:200;
-  background:var(--surface);border-bottom:1px solid var(--border);
-  padding:0 16px;display:flex;align-items:center;gap:10px;height:52px;
-}
+#topbar{position:sticky;top:0;z-index:200;background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;display:flex;align-items:center;gap:10px;height:52px;}
 #topbar h1{font-family:var(--mono);font-size:14px;font-weight:400;letter-spacing:.1em;color:var(--text2);flex:1;}
-.topbar-btn{
-  font-family:var(--mono);font-size:11px;color:var(--text3);
-  background:none;border:1px solid var(--border2);
-  padding:5px 10px;border-radius:20px;cursor:pointer;
-}
+.topbar-btn{font-family:var(--mono);font-size:11px;color:var(--text3);background:none;border:1px solid var(--border2);padding:5px 10px;border-radius:20px;cursor:pointer;}
 
-#chipbar{
-  background:var(--surface);border-bottom:1px solid var(--border);
-  padding:8px 14px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;
-}
+#chipbar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;}
 #chipbar::-webkit-scrollbar{display:none;}
-.chip{
-  font-family:var(--mono);font-size:11px;padding:5px 12px;border-radius:20px;
-  border:1px solid var(--border2);background:var(--surface);color:var(--text2);
-  cursor:pointer;white-space:nowrap;flex-shrink:0;
-}
+.chip{font-family:var(--mono);font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0;}
 .chip:active{background:var(--text);color:var(--surface);}
 
-#card-list{
-  padding:12px 12px 100px;
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:9px;
-  align-items:start;
-}
+#card-list{padding:12px 12px 100px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:9px;align-items:start;}
 
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
 .card-head{padding:10px 13px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);}
 .card-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .card-title{font-family:var(--mono);font-size:12px;letter-spacing:.03em;flex:1;color:var(--text);}
-.reset-pill{
-  font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:20px;
-  border:1px solid #e0d8cc;color:var(--text3);pointer-events:none;
-}
+.reset-pill{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:20px;border:1px solid #e0d8cc;color:var(--text3);pointer-events:none;}
 .reset-pill.on{background:var(--green-bg);color:var(--green);border-color:#b8d9c0;}
-.edit-btn{
-  width:28px;height:28px;border-radius:6px;background:none;border:none;
-  cursor:pointer;color:var(--text3);font-size:16px;
-  display:flex;align-items:center;justify-content:center;
-}
+.edit-btn{width:28px;height:28px;border-radius:6px;background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;display:flex;align-items:center;justify-content:center;}
 .edit-btn:active{background:var(--bg);}
 
 .card-body{padding:9px 13px;}
-.check-row{
-  display:flex;align-items:flex-start;gap:10px;padding:7px 0;
-  border-bottom:1px solid var(--border);cursor:pointer;
-}
+.check-row{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;}
 .check-row:last-of-type{border-bottom:none;}
-.cb{
-  width:18px;height:18px;border-radius:4px;flex-shrink:0;margin-top:1px;
-  border:1.5px solid var(--border2);background:var(--surface);
-  display:flex;align-items:center;justify-content:center;transition:all .15s;
-}
+.cb{width:18px;height:18px;border-radius:4px;flex-shrink:0;margin-top:1px;border:1.5px solid var(--border2);background:var(--surface);display:flex;align-items:center;justify-content:center;transition:all .15s;}
 .cb.on{background:var(--green);border-color:var(--green);}
 .cb.on::after{content:'';width:10px;height:6px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translate(1px,-1px);}
 .check-label{font-size:14px;line-height:1.4;flex:1;color:var(--text);}
@@ -86,33 +53,31 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:15
 .prog-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:4px;}
 .prog-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
 .prog-fill{height:100%;border-radius:2px;transition:width .3s;}
-
 .card-text{font-size:13px;line-height:1.7;color:var(--text2);white-space:pre-wrap;font-family:var(--mono);font-weight:300;}
+/* SORT MODE */
+.sort-active #btn-sort{background:var(--text);color:var(--surface);border-color:var(--text);}
+.sort-active #card-list{grid-template-columns:1fr;}
+.sort-controls{display:none;justify-content:flex-end;gap:6px;padding:2px 4px 2px 0;flex-shrink:0;}
+.sort-active .sort-controls{display:flex;}
+.sort-btn{width:28px;height:28px;border-radius:6px;background:none;border:1px solid var(--border2);cursor:pointer;color:var(--text2);font-size:16px;display:flex;align-items:center;justify-content:center;line-height:1;}
+.sort-btn:active{background:var(--bg);}
+.sort-active .edit-btn{display:none;}
+.sort-active .card{cursor:default;}
+
 
 #empty{grid-column:1/-1;padding:70px 20px;text-align:center;}
 #empty p{font-family:var(--mono);font-size:12px;color:var(--text3);line-height:2.4;}
 
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:flex;align-items:flex-end;}
-.modal{
-  background:var(--surface);border-radius:20px 20px 0 0;
-  width:100%;padding:16px 18px 40px;max-height:90dvh;overflow-y:auto;
-}
+.modal{background:var(--surface);border-radius:20px 20px 0 0;width:100%;padding:16px 18px 40px;max-height:90dvh;overflow-y:auto;}
 .drag-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px;}
 .modal h2{font-family:var(--mono);font-size:12px;font-weight:400;letter-spacing:.05em;margin-bottom:16px;color:var(--text3);}
 .flabel{font-family:var(--mono);font-size:11px;color:var(--text3);display:block;margin-bottom:5px;}
-.finput,.ftextarea{
-  width:100%;padding:10px 13px;border:1px solid var(--border2);border-radius:9px;
-  font-family:var(--mono);font-size:14px;font-weight:300;
-  color:var(--text);background:var(--bg);margin-bottom:14px;outline:none;
-  -webkit-appearance:none;
-}
+.finput,.ftextarea{width:100%;padding:10px 13px;border:1px solid var(--border2);border-radius:9px;font-family:var(--mono);font-size:14px;font-weight:300;color:var(--text);background:var(--bg);margin-bottom:14px;outline:none;-webkit-appearance:none;}
 .ftextarea{min-height:100px;resize:vertical;}
 .finput:focus,.ftextarea:focus{border-color:var(--text3);}
 
-.toggle-row{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:12px 0;border-top:1px solid var(--border);margin-bottom:14px;
-}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);margin-bottom:14px;}
 .toggle-row span{font-family:var(--mono);font-size:12px;color:var(--text2);}
 .tgl{position:relative;width:40px;height:22px;}
 .tgl input{opacity:0;width:0;height:0;}
@@ -126,47 +91,46 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:15
 .mbtn.primary{background:var(--text);color:var(--surface);border-color:var(--text);}
 .mbtn.danger{color:#c0392b;border-color:#f0c0bc;background:#fdf5f5;}
 
-/* INSTALL BANNER - pokazuje się tylko na iOS w Safari */
-#install-banner{
-  position:fixed;bottom:0;left:0;right:0;
-  background:var(--surface);border-top:1px solid var(--border);
-  padding:14px 18px 44px;z-index:300;display:none;
-}
-#install-banner p{font-family:var(--mono);font-size:12px;color:var(--text2);line-height:2;}
-#install-banner strong{color:var(--text);}
-#install-banner .steps{margin-top:8px;font-size:11px;color:var(--text3);line-height:2.2;}
-#install-banner button{
-  margin-top:12px;width:100%;padding:13px;border-radius:10px;
-  background:var(--text);color:var(--surface);border:none;
-  font-family:var(--mono);font-size:12px;cursor:pointer;
-}
+/* BANNER - eksport / instalacja */
+.banner{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:14px 18px 44px;z-index:300;display:none;}
+.banner p{font-family:var(--mono);font-size:12px;color:var(--text2);line-height:2;}
+.banner strong{color:var(--text);}
+.banner-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px;font-family:var(--mono);}
+.banner-btns{display:flex;gap:8px;margin-top:12px;}
+.banner-btn{flex:1;padding:12px;border-radius:10px;font-family:var(--mono);font-size:12px;cursor:pointer;border:1px solid var(--border2);background:var(--bg);color:var(--text2);}
+.banner-btn.primary{background:var(--text);color:var(--surface);border-color:var(--text);}
 
-#toast{
-  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
-  background:var(--green-bg);color:var(--green);border:1px solid #b8d9c0;
-  font-family:var(--mono);font-size:11px;padding:8px 16px;border-radius:20px;
-  z-index:600;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;
-}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green-bg);color:var(--green);border:1px solid #b8d9c0;font-family:var(--mono);font-size:11px;padding:8px 16px;border-radius:20px;z-index:600;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
 #toast.show{opacity:1;}
 </style>
 </head>
 <body>
 <div id="topbar">
   <h1>beyond</h1>
+  <button class="topbar-btn" id="btn-sort">⇅</button>
   <button class="topbar-btn" id="btn-export">↓ eksport</button>
   <button class="topbar-btn" id="btn-import">↑ import</button>
 </div>
 <div id="chipbar"></div>
 <div id="card-list"></div>
 
-<div id="install-banner">
-  <p>Dodaj <strong>Beyond</strong> do ekranu głównego:</p>
-  <div class="steps">
-    1. Naciśnij <strong>⎋↑</strong> (Udostępnij) na dole Safari<br>
-    2. Wybierz <strong>„Dodaj do ekranu głównego"</strong><br>
-    3. Gotowe – działa jak apka, dane zostają na telefonie
+<!-- Banner: dodaj do ekranu głównego -->
+<div class="banner" id="banner-install">
+  <div class="banner-title">📲 dodaj do ekranu głównego</div>
+  <p>Naciśnij <strong>⎋↑ Udostępnij</strong> na dole Safari<br>→ <strong>„Dodaj do ekranu głównego"</strong><br>Działa jak apka, dane zostają na telefonie.</p>
+  <div class="banner-btns">
+    <button class="banner-btn" id="install-close">zamknij</button>
   </div>
-  <button id="install-close">rozumiem ✓</button>
+</div>
+
+<!-- Banner: przypomnienie o eksporcie -->
+<div class="banner" id="banner-backup">
+  <div class="banner-title">💾 czas na backup</div>
+  <p>Minął tydzień od ostatniego eksportu.<br>Dane są tylko na tym telefonie – warto je zapisać.</p>
+  <div class="banner-btns">
+    <button class="banner-btn" id="backup-later">później</button>
+    <button class="banner-btn primary" id="backup-now">eksportuj teraz</button>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -227,6 +191,65 @@ function toast(msg){
   setTimeout(()=>el.classList.remove('show'),2500);
 }
 
+// ── BANERY ──
+function checkBanners(){
+  // Install banner – tylko iOS Safari, nie standalone
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone=window.navigator.standalone===true;
+  if(isIOS&&!isStandalone&&!localStorage.getItem('beyond_installed')){
+    setTimeout(()=>document.getElementById('banner-install').style.display='block', 1200);
+    return; // nie pokazuj obu naraz
+  }
+  // Backup banner – co 7 dni
+  const lastBackup=parseInt(localStorage.getItem('beyond_last_backup')||'0');
+  const now=Date.now();
+  const sevenDays=7*24*60*60*1000;
+  if(now-lastBackup>sevenDays&&state.nodes.length>0){
+    setTimeout(()=>document.getElementById('banner-backup').style.display='block', 1500);
+  }
+}
+
+document.getElementById('install-close').onclick=()=>{
+  document.getElementById('banner-install').style.display='none';
+  localStorage.setItem('beyond_installed','1');
+};
+document.getElementById('backup-later').onclick=()=>{
+  document.getElementById('banner-backup').style.display='none';
+  // przypomni za 2 dni
+  localStorage.setItem('beyond_last_backup', String(Date.now()-5*24*60*60*1000));
+};
+document.getElementById('backup-now').onclick=()=>{
+  document.getElementById('banner-backup').style.display='none';
+  doExport();
+};
+
+
+let sortMode=false;
+function toggleSort(){
+  sortMode=!sortMode;
+  document.body.classList.toggle('sort-active',sortMode);
+  document.getElementById('btn-sort').title=sortMode?'zakończ sortowanie':'sortuj karty';
+}
+function moveNode(id,dir){
+  const idx=state.nodes.findIndex(n=>n.id===id);
+  if(idx<0)return;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=state.nodes.length)return;
+  const tmp=state.nodes[idx];
+  state.nodes[idx]=state.nodes[newIdx];
+  state.nodes[newIdx]=tmp;
+  save();render();
+}
+
+function doExport(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='beyond_backup.json';a.click();
+  localStorage.setItem('beyond_last_backup',String(Date.now()));
+  toast('✓ backup zapisany');
+}
+
+// ── CHIPY ──
 function buildChips(){
   const bar=document.getElementById('chipbar');
   SECTIONS.forEach(s=>{
@@ -259,24 +282,29 @@ function render(){
 function buildCard(node){
   const s=SECTIONS.find(x=>x.type===node.type)||{};
   const card=document.createElement('div');card.className='card';
-
   const head=document.createElement('div');head.className='card-head';
   const dot=document.createElement('div');dot.className='card-dot';dot.style.background=node.color;
   const ttl=document.createElement('div');ttl.className='card-title';ttl.textContent=node.title;
   head.appendChild(dot);head.appendChild(ttl);
-
   if(s.resettable){
     const pill=document.createElement('span');
     pill.className='reset-pill'+(node.resetEnabled?' on':'');
     pill.textContent='↻ 3:00';
     head.appendChild(pill);
   }
-
   const eb=document.createElement('button');eb.className='edit-btn';eb.textContent='✎';
   eb.onclick=()=>openEdit(node.id);
   head.appendChild(eb);
-  card.appendChild(head);
 
+  const sc=document.createElement('div');sc.className='sort-controls';
+  const btnUp=document.createElement('button');btnUp.className='sort-btn';btnUp.textContent='↑';
+  const btnDn=document.createElement('button');btnDn.className='sort-btn';btnDn.textContent='↓';
+  btnUp.onclick=()=>moveNode(node.id,-1);
+  btnDn.onclick=()=>moveNode(node.id,1);
+  sc.appendChild(btnUp);sc.appendChild(btnDn);
+  head.appendChild(sc);
+
+  card.appendChild(head);
   const body=document.createElement('div');body.className='card-body';
   if(node.checklist){
     node.checklist.forEach((item,i)=>{
@@ -308,7 +336,6 @@ function openEdit(id){
   const s=SECTIONS.find(x=>x.type===node.type)||{};
   const isCL=!!node.checklist;
   const bodyVal=isCL?node.checklist.map(i=>i.label).join('\n'):(node.text||'');
-
   const ov=document.createElement('div');ov.className='overlay';
   ov.innerHTML=`<div class="modal">
     <div class="drag-handle"></div>
@@ -345,11 +372,8 @@ function openEdit(id){
 function closeEdit(){document.querySelectorAll('.overlay').forEach(el=>el.remove());}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
 
-document.getElementById('btn-export').onclick=()=>{
-  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='beyond_backup.json';a.click();
-};
+document.getElementById('btn-sort').onclick=toggleSort;
+document.getElementById('btn-export').onclick=()=>{doExport();};
 document.getElementById('btn-import').onclick=()=>{
   const inp=document.createElement('input');inp.type='file';inp.accept='.json';
   inp.onchange=e=>{
@@ -362,26 +386,12 @@ document.getElementById('btn-import').onclick=()=>{
   };inp.click();
 };
 
-// Banner instalacji - tylko iOS Safari, nie standalone
-const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
-const isStandalone=window.navigator.standalone===true;
-const bannerSeen=localStorage.getItem('beyond_banner');
-if(isIOS&&!isStandalone&&!bannerSeen){
-  document.getElementById('install-banner').style.display='block';
-}
-document.getElementById('install-close').onclick=()=>{
-  document.getElementById('install-banner').style.display='none';
-  localStorage.setItem('beyond_banner','1');
-};
-
 load();
 buildChips();
-if(!state.nodes.length){
-  addCard('supplements');
-  addCard('todo-day');
-  addCard('calories');
-} else render();
+if(!state.nodes.length){addCard('supplements');addCard('todo-day');addCard('calories');}
+else render();
 scheduleReset();
+checkBanners();
 </script>
 </body>
 </html>
