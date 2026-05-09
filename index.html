@@ -656,13 +656,16 @@ function buildSupps(nd,el){
     const lbl=document.createElement('span');lbl.className='supp-label'+(checked[i]?' done':'');
     lbl.textContent=item;
     row.appendChild(cb);row.appendChild(lbl);
-    row.addEventListener('click',e=>{
+    const toggleSupp=e=>{
       if(mode!=='normal')return;
       e.stopPropagation();
+      e.preventDefault();
       if(!nd.checked)nd.checked={};
       nd.checked[i]=!nd.checked[i];
       saveS();render();
-    });
+    };
+    row.addEventListener('touchend',toggleSupp,{passive:false});
+    row.addEventListener('click',toggleSupp);
     body.appendChild(row);
   });
   el.appendChild(body);
