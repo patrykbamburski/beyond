@@ -472,7 +472,6 @@ function bez(a,b){const dx=Math.abs(b.x-a.x)*.5;return`M${a.x},${a.y} C${a.x+dx}
 function _drawEdgesNow(){
   const svg=document.getElementById('cvsvg');
   svg.querySelectorAll('path.edge').forEach(p=>p.remove());
-  if(wireLocked)return;
   S.edges.forEach(edge=>{
     const fn=S.nodes.find(n=>n.id===edge.from),tn=S.nodes.find(n=>n.id===edge.to);
     if(!fn?._el||!tn?._el)return;
@@ -546,7 +545,7 @@ function buildCal(nd,el){
   CAL_ROWS.forEach(row=>{
     const inLinked=S.edges.some(e=>e.to===nd.id&&e.tp===`${row.id}_in`);
     const outLinked=S.edges.some(e=>e.from===nd.id&&e.fp===`${row.id}_out`);
-    if(wireLocked&&!inLinked&&!outLinked)return;
+    if(mode==='normal'&&!inLinked&&!outLinked)return;
     const val=getNodeVal(nd,row.id);
     const g=nd[`${row.id}Goal`]||row.default||0;
     const drow=document.createElement('div');drow.className='drow';
