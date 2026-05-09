@@ -1252,17 +1252,7 @@ document.getElementById('compass').addEventListener('click',()=>{
 });
 
 document.getElementById('czoom-fit').addEventListener('click',()=>{
-  if(!S.nodes.length){TX=2016;TY=2016;SC=1;applyT();return;}
-  const cr=cv.getBoundingClientRect();
-  const xs=S.nodes.map(n=>n.x),ys=S.nodes.map(n=>n.y);
-  const minX=Math.min(...xs),minY=Math.min(...ys);
-  const maxX=Math.max(...xs)+220,maxY=Math.max(...ys)+180;
-  const ww=maxX-minX,wh=maxY-minY;
-  const pad=16;
-  const ns=Math.min(4,Math.max(0.2,Math.min((cr.width-pad*2)/ww,(cr.height-pad*2)/wh)));
-  // top-left of bounding box at viewport top-left + padding
-  TX=(-minX*ns)+pad; TY=(-minY*ns)+pad; SC=ns;
-  applyT(); // drawEdges + updateCompass happen inside RAF in applyT
+  TX=2016;TY=2016;SC=1;applyT();
 });
 
 // ══════════════════════════════════════════
