@@ -795,18 +795,26 @@ let linking=null,tmpPath=null;
 function setupPortEl(portEl,nd,side,portType){
   portEl.addEventListener('pointerdown',e=>{
     e.stopPropagation();e.preventDefault();
-    if(wireLocked)return; // wires only in edit mode
-    // tap to disconnect
-    if(side==='in'){
-      const ex=S.edges.find(ed=>ed.to===nd.id&&ed.tp===portType);
-      if(ex){S.edges=S.edges.filter(ed=>ed!==ex);saveS();render();toast('disconnected');return;}
-    }
+    if(wireLocked)return;
+
     if(side==='out'){
-      const ex=S.edges.find(ed=>ed.from===nd.id&&ed.fp===portType);
-      if(ex){S.edges=S.edges.filter(ed=>ed!==ex);saveS();render();toast('disconnected');return;}
+      // OUT → start a new connection drag
+      linking={nd,side:'out',portType,portEl};
+    } else {
+      // IN → if connected, grab the wire and drag it off (disconnect on release)
+      const ex=S.edges.find(ed=>ed.to===nd.id&&ed.tp===portType);
+      if(!ex)return; // not connected, nothing to do
+      // remove edge immediately, start drag from the SOURCE out port visually
+      const srcNd=S.nodes.find(n=>n.id===ex.from);
+      const srcPortEl=srcNd?._el?.querySelector(`[data-fp="${ex.fp}"]`);
+      S.edges=S.edges.filter(ed=>ed!==ex);
+      saveS();render();
+      // now drag from the source out port
+      const realPortEl=srcNd?._el?.querySelector(`[data-fp="${ex.fp}"]`)||portEl;
+      linking={nd:srcNd||nd,side:'out',portType:ex.fp,portEl:realPortEl};
     }
-    linking={nd,side,portType,portEl};
-    portEl.classList.add('hl');
+
+    linking.portEl.classList.add('hl');
     const svg=document.getElementById('cvsvg');
     tmpPath=document.createElementNS('http://www.w3.org/2000/svg','path');
     tmpPath.setAttribute('fill','none');tmpPath.setAttribute('stroke','var(--blue)');
@@ -856,9 +864,8 @@ cv.addEventListener('pointerup',e=>{
 function tryConnect(from,to){
   if(from.nd.id===to.nd.id)return;
   let fNd=from.nd,fPt=from.portType,tNd=to.nd,tPt=to.portType;
-  // normalise to out→in
-  if(from.side==='in'&&to.side==='out'){[fNd,fPt,tNd,tPt]=[to.nd,to.portType,from.nd,from.portType];}
-  if(from.side===to.side){toast('connect ● to ●');return;}
+  // only allow out→in (forward only)
+  if(from.side!=='out'||to.side!=='in'){toast('output → input only');return;}
 
   // METRIC out → PANEL in
   if(METRIC_TYPES.includes(fNd.type)&&fPt.endsWith('_out')&&tNd.type==='panel'&&tPt==='panel_in'){
