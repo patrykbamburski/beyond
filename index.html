@@ -52,9 +52,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:system-ui
 .node:hover .ndel{opacity:1;}
 
 /* PORT */
-.port{position:absolute;width:13px;height:13px;border-radius:50%;border:2px solid var(--b2);background:var(--s);cursor:crosshair;z-index:20;touch-action:none;transition:transform .12s;}
-.port.p-left{left:-7px;}
-.port.p-right{right:-7px;}
+.port{position:absolute;width:20px;height:20px;border-radius:50%;border:3px solid var(--b2);background:var(--s);cursor:crosshair;z-index:20;touch-action:none;transition:transform .12s;}
+.port::after{content:'';position:absolute;inset:4px;border-radius:50%;background:var(--b2);}
+.port.linked::after{background:inherit;}
+.port.p-left{left:-10px;}
+.port.p-right{right:-10px;}
 .port.linked{border-width:2px;}
 .port.hl{transform:scale(1.5);background:var(--blue)!important;border-color:var(--blue)!important;}
 
@@ -64,8 +66,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:system-ui
 .dr-label{font-family:var(--mono);font-size:10px;flex:1;}
 .dr-val{font-family:var(--mono);font-size:12px;color:var(--t);}
 .dr-goal{font-family:var(--mono);font-size:10px;color:var(--t3);margin-left:2px;}
-.dr-port-l{position:absolute;left:-7px;top:50%;margin-top:-6px;}
-.dr-port-r{position:absolute;right:-7px;top:50%;margin-top:-6px;}
+.dr-port-l{position:absolute;left:-10px;top:50%;margin-top:-10px;}
+.dr-port-r{position:absolute;right:-10px;top:50%;margin-top:-10px;}
 
 /* CALORIES top */
 .cal-top{padding:10px 12px 8px;border-bottom:1px solid var(--b);}
@@ -195,8 +197,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:system-ui
   </svg>
 </div>
 <div id="compass-zoom">
-  <div class="czoom" id="czoom-in">+</div>
-  <div class="czoom" id="czoom-out">−</div>
   <div class="czoom" id="czoom-fit" style="font-size:11px">⊡</div>
 </div>
 <div id="compass-scale">100%</div>
@@ -389,10 +389,7 @@ function buildNodeEl(nd){
   el.dataset.nid=nd.id;nd._el=el;
   const nh=document.createElement('div');nh.className='nh';
   nh.innerHTML=`<span class="nih">${ICONS[nd.type]||'□'}</span><span class="ntitle">${nd.title}</span>`;
-  const del=document.createElement('button');del.className='ndel';del.textContent='×';
-  del.addEventListener('pointerdown',e=>e.stopPropagation());
-  del.addEventListener('click',e=>{e.stopPropagation();deleteNode(nd.id);});
-  nh.appendChild(del);el.appendChild(nh);
+  el.appendChild(nh);
   if(nd.type==='calories')    buildCal(nd,el);
   else if(nd.type==='panel')  buildPanel(nd,el);
   else if(nd.type==='note')   buildNote(nd,el);
@@ -425,9 +422,9 @@ function buildCal(nd,el){
     const drow=document.createElement('div');drow.className='drow';
     drow.innerHTML=`<span class="dr-label" style="color:${row.color}">${row.label}</span><span class="dr-val">${val}</span><span class="dr-goal"> /${g}${row.unit}</span>`;
     const inp=mkPort('in',`${row.id}_in`,row.color,inLinked,nd);
-    inp.classList.add('dr-port-l');drow.appendChild(inp);
+    drow.appendChild(inp);
     const outp=mkPort('out',`${row.id}_out`,row.color,outLinked,nd);
-    outp.classList.add('dr-port-r');drow.appendChild(outp);
+    drow.appendChild(outp);
     el.appendChild(drow);
   });
 }
@@ -470,12 +467,12 @@ function buildPanel(nd,el){
   const inLinked=!!inEdge;
   const inColor=inLinked?(TRACK_PORTS[S.edges.find(e=>e.to===nd.id&&e.tp==='panel_in')?.fp?.replace('_out','')]?.color||'var(--b2)'):'var(--b2)';
   const inp=mkPort('in','panel_in',inColor,inLinked,nd);
-  inp.style.top='50%';inp.style.marginTop='-6px';el.appendChild(inp);
+  inp.style.top='50%';inp.style.marginTop='-10px';el.appendChild(inp);
   // OUT port (right) – sends to cal in
   const outLinked=!!outEdge;
   const outColor=tp?tp.color:'var(--b2)';
   const outp=mkPort('out',outEdge?outEdge.fp:'panel_out',outColor,outLinked,nd);
-  outp.style.top='50%';outp.style.marginTop='-6px';el.appendChild(outp);
+  outp.style.top='50%';outp.style.marginTop='-10px';el.appendChild(outp);
 }
 
 // ── NOTE ──────────────────────────────────
@@ -511,7 +508,7 @@ function buildWater(nd,el){
   // out port for water metric
   const outLinked=S.edges.some(e=>e.from===nd.id&&e.fp==='water_out');
   const outp=mkPort('out','water_out',TRACK_PORTS.water.color,outLinked,nd);
-  outp.style.top='50%';outp.style.marginTop='-6px';el.appendChild(outp);
+  outp.style.top='50%';outp.style.marginTop='-10px';el.appendChild(outp);
 }
 
 // ── SUPPLEMENTS ───────────────────────────
@@ -567,7 +564,7 @@ function buildTrackHistory(nd,el){
     const row=document.createElement('div');row.className='hist-in-row';
     row.innerHTML=`<span class="hist-in-label" style="color:${tp.color}">${tp.label}</span>`;
     const inp=mkPort('in',`${srcId}_hist_in`,tp.color,true,nd);
-    inp.classList.add('dr-port-l');row.appendChild(inp);
+    row.appendChild(inp);
     el.appendChild(row);
   });
 
@@ -576,7 +573,7 @@ function buildTrackHistory(nd,el){
     const row=document.createElement('div');row.className='hist-in-row';
     row.innerHTML=`<span class="hist-in-label">+</span>`;
     const inp=mkPort('in','hist_any_in','var(--b2)',false,nd);
-    inp.classList.add('dr-port-l');row.appendChild(inp);
+    row.appendChild(inp);
     el.appendChild(row);
   }
 }
@@ -619,8 +616,19 @@ cv.addEventListener('pointermove',e=>{
 
 cv.addEventListener('pointerup',e=>{
   if(linking){
-    const el=document.elementFromPoint(e.clientX,e.clientY);
-    if(el?.classList.contains('port')&&el!==linking.portEl){
+    // snap: check area around finger tip for nearby port
+    let targetPort=null;
+    const SNAP=28; // px snap radius
+    for(const dx of [-SNAP,0,SNAP]){for(const dy of [-SNAP,0,SNAP]){
+      const hit=document.elementFromPoint(e.clientX+dx,e.clientY+dy);
+      if(hit?.classList.contains('port')&&hit!==linking.portEl){targetPort=hit;break;}
+      if(targetPort)break;
+    }}
+    // also try exact point
+    const exactHit=document.elementFromPoint(e.clientX,e.clientY);
+    if(exactHit?.classList.contains('port')&&exactHit!==linking.portEl)targetPort=exactHit;
+    const el=targetPort;
+    if(el&&el!==linking.portEl){
       const nodeEl=el.closest('.node');
       if(nodeEl){
         const toNd=S.nodes.find(n=>n.id===parseInt(nodeEl.dataset.nid));
@@ -949,21 +957,6 @@ document.getElementById('compass').addEventListener('click',()=>{
   TX=0;TY=0;SC=1;applyT();drawEdges();updateCompass();
 });
 
-// zoom buttons
-document.getElementById('czoom-in').addEventListener('click',()=>{
-  const cr=cv.getBoundingClientRect();
-  const ox=cr.width/2,oy=cr.height/2;
-  const ns=Math.min(4,SC*1.25);
-  TX=ox-(ox-TX)*(ns/SC);TY=oy-(oy-TY)*(ns/SC);SC=ns;
-  applyT();drawEdges();updateCompass();
-});
-document.getElementById('czoom-out').addEventListener('click',()=>{
-  const cr=cv.getBoundingClientRect();
-  const ox=cr.width/2,oy=cr.height/2;
-  const ns=Math.max(0.2,SC*0.8);
-  TX=ox-(ox-TX)*(ns/SC);TY=oy-(oy-TY)*(ns/SC);SC=ns;
-  applyT();drawEdges();updateCompass();
-});
 document.getElementById('czoom-fit').addEventListener('click',()=>{
   if(!S.nodes.length){TX=0;TY=0;SC=1;applyT();drawEdges();updateCompass();return;}
   const cr=cv.getBoundingClientRect();
