@@ -25,6 +25,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:system-ui
 #mode-switcher{display:flex;border:1px solid var(--b2);border-radius:20px;overflow:hidden;flex-shrink:0;}
 .mdbtn{font-family:var(--mono);font-size:11px;padding:4px 10px;border:none;background:none;color:var(--t3);cursor:pointer;white-space:nowrap;}
 .mdbtn.active{background:var(--t);color:var(--s);}
+#edit-locks{display:none;gap:4px;align-items:center;}
+.lockbtn{
+  width:28px;height:28px;border-radius:8px;border:1px solid var(--b2);
+  background:none;cursor:pointer;color:var(--t3);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .12s,color .12s;
+}
+.lockbtn.locked{background:var(--t);color:var(--s);border-color:var(--t);}
 
 /* CHIPBAR */
 #chipbar{position:fixed;top:48px;left:0;right:0;height:40px;z-index:200;background:var(--s);border-bottom:1px solid var(--b);display:flex;align-items:center;gap:4px;padding:0 10px;overflow-x:auto;scrollbar-width:none;}
@@ -172,7 +180,23 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:system-ui
   <div id="mode-switcher">
     <button class="mdbtn active" data-mode="normal">View</button>
     <button class="mdbtn" data-mode="edit">Edit</button>
-    <button class="mdbtn" data-mode="wire">Wire</button>
+  </div>
+  <div id="edit-locks" style="display:flex;gap:4px;align-items:center;">
+    <button class="lockbtn" id="lock-move" title="Lock moving">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 1L8 15M1 8L15 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M5 4L8 1L11 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5 12L8 15L11 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 5L1 8L4 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M12 5L15 8L12 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="lockbtn" id="lock-wire" title="Lock wiring">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 5C2 5 4 5 5 7C6 9 7 9 8 9C9 9 10 9 11 7C12 5 14 5 14 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 11C2 11 4 11 5 9C6 7 7 7 8 7C9 7 10 7 11 9C12 11 14 11 14 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
   </div>
 </div>
 <div id="chipbar"></div>
@@ -218,16 +242,20 @@ const KUWETY = [
   {
     id:'main', label:'Main',
     items:[
-      {type:'panel', icon:'□', label:'Panel'},
-      {type:'note',  icon:'✏️', label:'Note'},
+      {type:'panel',  icon:'□',  label:'Panel'},
+      {type:'note',   icon:'✏️', label:'Note'},
+      {type:'merge',  icon:'⇒',  label:'Merge'},
     ]
   },
   {
     id:'track', label:'Track',
     items:[
-      {type:'calories',    icon:'🔥', label:'Calorie Balance'},
-      {type:'water',       icon:'💧', label:'Water'},
-      {type:'supplements', icon:'💊', label:'Supplements'},
+      {type:'kcal',        icon:'🔥', label:'kcal'},
+      {type:'protein',     icon:'💪', label:'protein'},
+      {type:'carbs',       icon:'🌾', label:'carbs'},
+      {type:'fat',         icon:'🥑', label:'fat'},
+      {type:'water',       icon:'💧', label:'water'},
+      {type:'supplements', icon:'💊', label:'supplements'},
       {type:'trackhistory',icon:'📋', label:'Track History'},
     ]
   },
@@ -238,22 +266,25 @@ const KUWETY = [
 // All trackable metrics – each has id, label, unit, color, nodeType
 // ══════════════════════════════════════════
 const TRACK_PORTS = {
-  kcal:    {label:'kcal',    unit:'kcal', color:'#c4621a', nodeType:'calories'},
-  protein: {label:'protein', unit:'g',    color:'#534ab7', nodeType:'calories'},
-  carbs:   {label:'carbs',   unit:'g',    color:'#b07a18', nodeType:'calories'},
-  fat:     {label:'fat',     unit:'g',    color:'#3d7a4a', nodeType:'calories'},
+  kcal:    {label:'kcal',    unit:'kcal', color:'#c4621a', nodeType:'kcal'},
+  protein: {label:'protein', unit:'g',    color:'#534ab7', nodeType:'protein'},
+  carbs:   {label:'carbs',   unit:'g',    color:'#b07a18', nodeType:'carbs'},
+  fat:     {label:'fat',     unit:'g',    color:'#3d7a4a', nodeType:'fat'},
   water:   {label:'water',   unit:'ml',   color:'#185fa5', nodeType:'water'},
+  merge:   {label:'merge',   unit:'',     color:'#888780', nodeType:'merge'},
 };
 
-// Calorie rows (subset of TRACK_PORTS)
-const CAL_ROWS = ['kcal','protein','carbs','fat'].map(id=>({id,...TRACK_PORTS[id]}));
+// Metric node types (have value + goal + out port)
+const METRIC_TYPES = ['kcal','protein','carbs','fat','water'];
 
 // ══════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════
 const STOR='bv6';
 let S={nodes:[],edges:[],ctr:0};
-let mode='normal'; // 'normal' | 'edit' | 'wire'
+let mode='normal'; // 'normal' | 'edit'
+let moveLocked=true; // locked by default in view mode
+let wireLocked=true;
 let TX=0,TY=0,SC=1;
 
 function loadS(){
@@ -271,19 +302,18 @@ function saveS(){
 // ══════════════════════════════════════════
 const cv=document.getElementById('cv');
 let pans={},pinchD0=0,pinchSC0=1,pinchTX0=0,pinchTY0=0;
-let rafId=null;
 function applyT(){
-  if(rafId)cancelAnimationFrame(rafId);
-  rafId=requestAnimationFrame(()=>{
-    rafId=null;
-    const t=`translate(${TX}px,${TY}px) scale(${SC})`;
-    document.getElementById('cvbg').style.transform=t;
-    document.getElementById('cvnodes').style.transform=t;
-    // scale ports inversely so they stay ~20px on screen regardless of zoom
-    const portPx=Math.round(Math.min(28,Math.max(14,20/SC)));
-    document.documentElement.style.setProperty('--port-size', portPx+'px');
-    document.documentElement.style.setProperty('--port-off', (-portPx/2)+'px');
-    // draw edges AFTER transform applied so getBoundingClientRect is correct
+  const t=`translate(${TX}px,${TY}px) scale(${SC})`;
+  const bg=document.getElementById('cvbg');
+  const nd=document.getElementById('cvnodes');
+  bg.style.transform=t;
+  nd.style.transform=t;
+  // scale ports inversely
+  const portPx=Math.min(28,Math.max(14,20/SC));
+  document.documentElement.style.setProperty('--port-size', portPx+'px');
+  document.documentElement.style.setProperty('--port-off', (-portPx/2)+'px');
+  // edges and compass deferred one frame so layout is settled
+  requestAnimationFrame(()=>{
     _drawEdgesNow();
     updateBorder&&updateBorder();
     _updateCompassNow();
@@ -339,21 +369,11 @@ function portPos(el){
   const r=el.getBoundingClientRect(),cr=cv.getBoundingClientRect();
   return{x:r.left+r.width/2-cr.left,y:r.top+r.height/2-cr.top};
 }
-function getNodeVal(nd,metricId){
-  // get current value of a metric from a node
-  if(nd.type==='calories'){
-    const inEdge=S.edges.find(e=>e.to===nd.id&&e.tp===`${metricId}_in`);
-    if(!inEdge)return 0;
-    const panel=S.nodes.find(n=>n.id===inEdge.from);
-    return panel?panel.value||0:0;
-  }
-  if(nd.type==='water') return nd.value||0;
-  return 0;
+function getNodeVal(nd){
+  return nd.value||0;
 }
-function getGoal(nd,metricId){
-  if(nd.type==='calories'){const tp=TRACK_PORTS[metricId];return nd[`${metricId}Goal`]||tp?.default||0;}
-  if(nd.type==='water') return nd.goal||2000;
-  return 0;
+function getGoal(nd){
+  return nd.goal||nd.defaultGoal||0;
 }
 
 // ══════════════════════════════════════════
@@ -363,7 +383,7 @@ function bez(a,b){const dx=Math.abs(b.x-a.x)*.5;return`M${a.x},${a.y} C${a.x+dx}
 function _drawEdgesNow(){
   const svg=document.getElementById('cvsvg');
   svg.querySelectorAll('path.edge').forEach(p=>p.remove());
-  if(mode==='normal')return;
+  if(wireLocked)return;
   S.edges.forEach(edge=>{
     const fn=S.nodes.find(n=>n.id===edge.from),tn=S.nodes.find(n=>n.id===edge.to);
     if(!fn?._el||!tn?._el)return;
@@ -402,7 +422,7 @@ function mkPort(side,portKey,color,linked,nd){
 // ══════════════════════════════════════════
 // BUILD NODE
 // ══════════════════════════════════════════
-const ICONS={calories:'🔥',panel:'□',note:'✏️',water:'💧',supplements:'💊',trackhistory:'📋'};
+const ICONS={kcal:'🔥',protein:'💪',carbs:'🌾',fat:'🥑',water:'💧',panel:'□',note:'✏️',supplements:'💊',merge:'⇒',trackhistory:'📋'};
 
 function buildNodeEl(nd){
   const el=document.createElement('div');
@@ -411,11 +431,11 @@ function buildNodeEl(nd){
   const nh=document.createElement('div');nh.className='nh';
   nh.innerHTML=`<span class="nih">${ICONS[nd.type]||'□'}</span><span class="ntitle">${nd.title}</span>`;
   el.appendChild(nh);
-  if(nd.type==='calories')    buildCal(nd,el);
+  if(METRIC_TYPES.includes(nd.type)) buildMetric(nd,el);
   else if(nd.type==='panel')  buildPanel(nd,el);
   else if(nd.type==='note')   buildNote(nd,el);
-  else if(nd.type==='water')  buildWater(nd,el);
   else if(nd.type==='supplements') buildSupps(nd,el);
+  else if(nd.type==='merge')  buildMerge(nd,el);
   else if(nd.type==='trackhistory') buildTrackHistory(nd,el);
   setupDragTap(el,nd);
   return el;
@@ -437,7 +457,7 @@ function buildCal(nd,el){
   CAL_ROWS.forEach(row=>{
     const inLinked=S.edges.some(e=>e.to===nd.id&&e.tp===`${row.id}_in`);
     const outLinked=S.edges.some(e=>e.from===nd.id&&e.fp===`${row.id}_out`);
-    if(mode==='normal'&&!inLinked&&!outLinked)return;
+    if(wireLocked&&!inLinked&&!outLinked)return;
     const val=getNodeVal(nd,row.id);
     const g=nd[`${row.id}Goal`]||row.default||0;
     const drow=document.createElement('div');drow.className='drow';
@@ -509,27 +529,32 @@ function buildNote(nd,el){
   el.appendChild(body);
 }
 
-// ── WATER ─────────────────────────────────
-function buildWater(nd,el){
-  const val=nd.value||0,goal=nd.goal||2000;
-  const pct=Math.min(100,Math.round(val/goal*100));
+// ── METRIC NODE (kcal / protein / carbs / fat / water) ──
+function buildMetric(nd,el){
+  const tp=TRACK_PORTS[nd.type]||{color:'#888',unit:''};
+  const val=nd.value||0;
+  const goal=nd.goal||nd.defaultGoal||0;
+  const pct=goal?Math.min(100,Math.round(val/goal*100)):0;
+  const fillColor=pct>100?'#b83232':pct>80?'var(--green)':tp.color;
+
   const body=document.createElement('div');body.className='water-body';
-  body.innerHTML=`
-    <div class="water-big">${val}<span style="font-size:13px;color:var(--t3)"> ml</span></div>
-    <div class="water-unit">goal: ${goal} ml</div>
-    <div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:${pct}%;background:#185fa5"></div></div>
-  `;
   body.style.cursor='text';
-  body.addEventListener('pointerup',e=>{
+  body.innerHTML=`
+    <div class="water-big" style="color:${tp.color}" data-metric-tap>${val}<span style="font-size:13px;color:var(--t3)"> ${tp.unit}</span></div>
+    <div class="water-unit">goal: ${goal} ${tp.unit}</div>
+    <div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:${pct}%;background:${fillColor}"></div></div>
+  `;
+  body.querySelector('[data-metric-tap]').addEventListener('pointerup',e=>{
     if(mode!=='normal')return;
     e.stopPropagation();
-    openInlineNumber(nd,body.querySelector('.water-big'),'ml','#185fa5',true);
+    openInlineNumber(nd,body.querySelector('[data-metric-tap]'),tp.unit,tp.color,false);
   });
   el.appendChild(body);
-  // out port for water metric
-  const outLinked=S.edges.some(e=>e.from===nd.id&&e.fp==='water_out');
-  const outp=mkPort('out','water_out',TRACK_PORTS.water.color,outLinked,nd);
-  outp.style.top='50%';outp.style.marginTop='calc(var(--port-size,20px)/-2)';el.appendChild(outp);
+
+  const outLinked=S.edges.some(e=>e.from===nd.id&&e.fp===`${nd.type}_out`);
+  const outp=mkPort('out',`${nd.type}_out`,tp.color,outLinked,nd);
+  outp.style.top='50%';outp.style.marginTop='calc(var(--port-size,20px)/-2)';
+  el.appendChild(outp);
 }
 
 // ── SUPPLEMENTS ───────────────────────────
@@ -555,10 +580,62 @@ function buildSupps(nd,el){
   el.appendChild(body);
 }
 
+// ── MERGE NODE ────────────────────────────
+function buildMerge(nd,el){
+  el.style.minWidth='160px';
+  const inEdges=S.edges.filter(e=>e.to===nd.id);
+  const connectedIds=new Set(inEdges.map(e=>e.fp));
+
+  const body=document.createElement('div');body.className='hist-body';
+  // show connected metrics
+  if(!inEdges.length){
+    body.innerHTML='<div class="hist-empty" style="font-size:10px">connect track nodes →</div>';
+  } else {
+    inEdges.forEach(edge=>{
+      const srcNd=S.nodes.find(n=>n.id===edge.from);if(!srcNd)return;
+      let label='',color='#888';
+      if(METRIC_TYPES.includes(srcNd.type)){
+        const tp=TRACK_PORTS[srcNd.type];
+        const val=srcNd.value||0,goal=srcNd.goal||0;
+        label=`${tp.label}: ${val}${tp.unit}${goal?' /'+goal+tp.unit:''}`;
+        color=tp.color;
+      } else if(srcNd.type==='supplements'){
+        const items=srcNd.items||[];
+        const checked=Object.values(srcNd.checked||{}).filter(Boolean).length;
+        label=`supplements: ${checked}/${items.length}`;
+        color='#534ab7';
+      }
+      const row=document.createElement('div');row.className='hist-in-row';
+      row.innerHTML=`<span class="hist-in-label" style="color:${color}">${label}</span>`;
+      const inp=mkPort('in',edge.tp,color,true,nd);
+      inp.classList.add('dr-port-l');row.appendChild(inp);
+      el.appendChild(row);
+    });
+  }
+  el.appendChild(body);
+
+  // one empty in-slot for next connection
+  const availPorts=Object.keys(TRACK_PORTS).filter(id=>!connectedIds.has(`${id}_out`));
+  if(availPorts.length){
+    const row=document.createElement('div');row.className='hist-in-row';
+    row.innerHTML='<span class="hist-in-label" style="color:var(--t3)">+ connect</span>';
+    const inp=mkPort('in','merge_any_in','var(--b2)',false,nd);
+    inp.classList.add('dr-port-l');row.appendChild(inp);
+    el.appendChild(row);
+  }
+
+  // single OUT port → track history
+  const outLinked=S.edges.some(e=>e.from===nd.id&&e.fp==='merge_out');
+  const outp=mkPort('out','merge_out',TRACK_PORTS.merge.color,outLinked,nd);
+  outp.style.top='50%';outp.style.marginTop='calc(var(--port-size,20px)/-2)';
+  el.appendChild(outp);
+}
+
 // ── TRACK HISTORY ─────────────────────────
 function buildTrackHistory(nd,el){
   // find all connected in-edges (from track nodes out ports)
   const inEdges=S.edges.filter(e=>e.to===nd.id);
+  // group by source merge name for section headers
   const hist=nd.history||[];
 
   // show entries or waiting message
@@ -566,7 +643,10 @@ function buildTrackHistory(nd,el){
   if(hist.length){
     hist.slice(0,8).forEach(entry=>{
       const div=document.createElement('div');div.className='hist-entry';
-      div.innerHTML=`<div class="hist-date">${entry.date}</div><div>${entry.metrics.join(' · ')}</div>`;
+      const content=(entry.lines||entry.metrics||[]).map(l=>
+        l.startsWith('[')?`<span style="color:var(--t3);font-size:9px">${l}</span>`:l
+      ).join('<br>');
+      div.innerHTML=`<div class="hist-date">${entry.date}</div><div>${content}</div>`;
       body.appendChild(div);
     });
   } else {
@@ -575,29 +655,30 @@ function buildTrackHistory(nd,el){
   }
   el.appendChild(body);
 
-  // dynamic input rows – always show connected ones + one empty slot
-  const connectedIds=new Set(inEdges.map(e=>e.fp));
-  const availablePorts=Object.entries(TRACK_PORTS).filter(([id])=>!connectedIds.has(`${id}_out`));
-
-  // show connected rows
+  // show one row per connected source – port key = edge.tp so querySelector finds it
   inEdges.forEach(edge=>{
-    const srcId=edge.fp.replace('_out','');
-    const tp=TRACK_PORTS[srcId];if(!tp)return;
+    const srcNd=S.nodes.find(n=>n.id===edge.from);if(!srcNd)return;
+    let label=srcNd.title||srcNd.type;
+    let color='#888';
+    if(METRIC_TYPES.includes(srcNd.type)){color=TRACK_PORTS[srcNd.type]?.color||'#888';}
+    else if(srcNd.type==='merge'){color='#888780';}
+    else if(srcNd.type==='supplements'){color='#534ab7';}
     const row=document.createElement('div');row.className='hist-in-row';
-    row.innerHTML=`<span class="hist-in-label" style="color:${tp.color}">${tp.label}</span>`;
-    const inp=mkPort('in',`${srcId}_hist_in`,tp.color,true,nd);
+    row.innerHTML=`<span class="hist-in-label" style="color:${color}">${label}</span>`;
+    // CRITICAL: data-tp must equal edge.tp exactly
+    const inp=mkPort('in',edge.tp,color,true,nd);
+    inp.classList.add('dr-port-l');
     row.appendChild(inp);
     el.appendChild(row);
   });
 
   // one empty slot for next connection
-  if(availablePorts.length>0){
-    const row=document.createElement('div');row.className='hist-in-row';
-    row.innerHTML=`<span class="hist-in-label">+</span>`;
-    const inp=mkPort('in','hist_any_in','var(--b2)',false,nd);
-    row.appendChild(inp);
-    el.appendChild(row);
-  }
+  const emptyRow=document.createElement('div');emptyRow.className='hist-in-row';
+  emptyRow.innerHTML=`<span class="hist-in-label" style="color:var(--t3)">+ connect</span>`;
+  const emptyInp=mkPort('in','hist_any_in','var(--b2)',false,nd);
+  emptyInp.classList.add('dr-port-l');
+  emptyRow.appendChild(emptyInp);
+  el.appendChild(emptyRow);
 }
 
 // ══════════════════════════════════════════
@@ -608,7 +689,7 @@ let linking=null,tmpPath=null;
 function setupPortEl(portEl,nd,side,portType){
   portEl.addEventListener('pointerdown',e=>{
     e.stopPropagation();e.preventDefault();
-    if(mode==='normal')return; // wires only in edit mode
+    if(wireLocked)return; // wires only in edit mode
     // tap to disconnect
     if(side==='in'){
       const ex=S.edges.find(ed=>ed.to===nd.id&&ed.tp===portType);
@@ -673,35 +754,44 @@ function tryConnect(from,to){
   if(from.side==='in'&&to.side==='out'){[fNd,fPt,tNd,tPt]=[to.nd,to.portType,from.nd,from.portType];}
   if(from.side===to.side){toast('connect ● to ●');return;}
 
-  // PANEL out → CALORIES in
-  if(fNd.type==='panel'&&tNd.type==='calories'&&tPt.endsWith('_in')){
-    if(S.edges.find(e=>e.to===tNd.id&&e.tp===tPt)){toast('port busy');return;}
-    if(S.edges.find(e=>e.from===fNd.id&&e.fp!=='panel_in'&&!e.fp?.endsWith('_out'))){toast('panel already sending');return;}
-    S.edges.push({from:fNd.id,fp:tPt,to:tNd.id,tp:tPt});
-    saveS();render();toast('✓ connected');return;
-  }
-
-  // CALORIES out → PANEL in
-  if(fNd.type==='calories'&&tNd.type==='panel'&&fPt.endsWith('_out')&&tPt==='panel_in'){
+  // METRIC out → PANEL in
+  if(METRIC_TYPES.includes(fNd.type)&&fPt.endsWith('_out')&&tNd.type==='panel'&&tPt==='panel_in'){
     if(S.edges.find(e=>e.to===tNd.id&&e.tp==='panel_in')){toast('panel busy');return;}
     S.edges.push({from:fNd.id,fp:fPt,to:tNd.id,tp:'panel_in'});
     saveS();render();toast('✓ connected');return;
   }
 
-  // WATER out → PANEL in
-  if(fNd.type==='water'&&fPt==='water_out'&&tNd.type==='panel'&&tPt==='panel_in'){
-    if(S.edges.find(e=>e.to===tNd.id&&e.tp==='panel_in')){toast('panel busy');return;}
-    S.edges.push({from:fNd.id,fp:'water_out',to:tNd.id,tp:'panel_in'});
-    saveS();render();toast('✓ connected');return;
+  // METRIC out → MERGE in
+  if(METRIC_TYPES.includes(fNd.type)&&fPt.endsWith('_out')&&tNd.type==='merge'){
+    const srcId=fPt.replace('_out','');
+    const mergeTp=`${srcId}_merge_in`;
+    if(S.edges.find(e=>e.to===tNd.id&&e.tp===mergeTp)){toast('already in merge');return;}
+    if(S.edges.find(e=>e.from===fNd.id&&e.to===tNd.id)){toast('already connected');return;}
+    S.edges.push({from:fNd.id,fp:fPt,to:tNd.id,tp:mergeTp});
+    saveS();render();toast('✓ merged');return;
   }
 
-  // ANY TRACK out → TRACK HISTORY in
-  if(tNd.type==='trackhistory'&&fPt.endsWith('_out')){
+  // METRIC out → TRACK HISTORY in (direct)
+  if(METRIC_TYPES.includes(fNd.type)&&fPt.endsWith('_out')&&tNd.type==='trackhistory'){
     const srcId=fPt.replace('_out','');
     const histTp=`${srcId}_hist_in`;
     if(S.edges.find(e=>e.to===tNd.id&&e.tp===histTp)){toast('already tracking');return;}
     S.edges.push({from:fNd.id,fp:fPt,to:tNd.id,tp:histTp});
     saveS();render();toast('✓ tracking');return;
+  }
+
+  // MERGE out → TRACK HISTORY in
+  if(fNd.type==='merge'&&fPt==='merge_out'&&tNd.type==='trackhistory'){
+    if(S.edges.find(e=>e.from===fNd.id&&e.to===tNd.id)){toast('already connected');return;}
+    S.edges.push({from:fNd.id,fp:'merge_out',to:tNd.id,tp:'merge_in'});
+    saveS();render();toast('✓ connected');return;
+  }
+
+  // SUPPLEMENTS out → MERGE in
+  if(fNd.type==='supplements'&&fPt==='supps_out'&&tNd.type==='merge'){
+    if(S.edges.find(e=>e.from===fNd.id&&e.to===tNd.id)){toast('already connected');return;}
+    S.edges.push({from:fNd.id,fp:'supps_out',to:tNd.id,tp:'supps_merge_in'});
+    saveS();render();toast('✓ connected');return;
   }
 
   toast('invalid connection');
@@ -717,7 +807,7 @@ function setupDragTap(el,nd){
     if(e.target.classList.contains('port')||e.target.classList.contains('ndel'))return;
     e.stopPropagation();
     sx=e.clientX;sy=e.clientY;nx0=nd.x;ny0=nd.y;moved=false;dragging=false;
-    if(mode==='normal')return; // drag only in edit mode
+    if(moveLocked)return; // blocked when move locked
     timer=setTimeout(()=>{
       dragging=true;el.classList.add('dragging');
       try{el.setPointerCapture(e.pointerId);}catch(err){}
@@ -758,10 +848,14 @@ function deleteNode(id){
 }
 function addNodeAt(type,x,y){
   const nd={id:S.ctr++,type,x:Math.round(x),y:Math.round(y)};
-  if(type==='calories'){nd.title='Calorie Balance';nd.kcalGoal=2200;nd.proteinGoal=150;nd.carbsGoal=250;nd.fatGoal=70;}
+  const metricDefaults={kcal:{goal:2200},protein:{goal:150},carbs:{goal:250},fat:{goal:70},water:{goal:2000}};
+  if(METRIC_TYPES.includes(type)){
+    const tp=TRACK_PORTS[type];
+    nd.title=tp.label;nd.value=0;nd.goal=metricDefaults[type]?.goal||0;nd.defaultGoal=nd.goal;
+  }
   else if(type==='panel'){nd.title='Panel';nd.value=0;}
   else if(type==='note'){nd.title='Note';nd.text='';}
-  else if(type==='water'){nd.title='Water';nd.value=0;nd.goal=2000;}
+  else if(type==='merge'){nd.title='Merge';}
   else if(type==='supplements'){nd.title='Supplements';nd.items=['Vitamin D','Magnesium','Omega-3','Zinc','B12'];nd.checked={};}
   else if(type==='trackhistory'){nd.title='Track History';nd.history=[];}
   S.nodes.push(nd);saveS();render();
@@ -830,11 +924,47 @@ document.querySelectorAll('.mdbtn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     mode=btn.dataset.mode;
     document.querySelectorAll('.mdbtn').forEach(b=>b.classList.toggle('active',b===btn));
-    // show/hide hint
-    const hints={normal:'tap = interact',edit:'hold = move · tap = edit settings',wire:'drag ● to ● to connect · tap ● to disconnect'};
-    document.getElementById('hint').textContent=hints[mode]||'';
+    // set lock defaults per mode
+    if(mode==='normal'){
+      moveLocked=true;
+      wireLocked=true;
+    } else { // edit
+      moveLocked=false;
+      wireLocked=false;
+    }
+    document.getElementById('lock-move').classList.toggle('locked',moveLocked);
+    document.getElementById('lock-wire').classList.toggle('locked',wireLocked);
+    updateHint();
     render();
   });
+});
+
+function updateHint(){
+  const hints={
+    normal:'tap = interact',
+    edit:'hold = move · tap = edit settings'
+  };
+  let h=hints[mode]||'';
+  if(mode==='edit'){
+    if(moveLocked&&wireLocked) h='all locked';
+    else if(moveLocked) h='wiring enabled · moving locked';
+    else if(wireLocked) h='moving enabled · wiring locked';
+    else h='hold = move · drag ● = wire · tap = edit';
+  }
+  document.getElementById('hint').textContent=h;
+}
+
+document.getElementById('lock-move').addEventListener('click',()=>{
+  moveLocked=!moveLocked;
+  document.getElementById('lock-move').classList.toggle('locked',moveLocked);
+  updateHint();
+});
+
+document.getElementById('lock-wire').addEventListener('click',()=>{
+  wireLocked=!wireLocked;
+  document.getElementById('lock-wire').classList.toggle('locked',wireLocked);
+  updateHint();
+  render(); // re-render to show/hide ports
 });
 
 // ══════════════════════════════════════════
@@ -898,8 +1028,9 @@ function openEdit(id){
   const nd=S.nodes.find(n=>n.id===id);if(!nd)return;
   const ov=document.createElement('div');ov.className='ov';
   let fields='';
-  if(nd.type==='calories'){
-    fields=CAL_ROWS.map((r,i)=>`<label class="ml">${r.label} goal (${r.unit})</label><input class="mi" id="g${i}" type="number" value="${nd[`${r.id}Goal`]||r.default||0}" inputmode="decimal">`).join('');
+  if(METRIC_TYPES.includes(nd.type)){
+    const tp=TRACK_PORTS[nd.type];
+    fields=`<label class="ml">goal (${tp.unit})</label><input class="mi" id="g0" type="number" value="${nd.goal||0}" inputmode="decimal">`;
   } else if(nd.type==='panel'){
     fields=`<label class="ml">value</label><input class="mi" id="pval" type="number" value="${nd.value||0}" inputmode="decimal">`;
   } else if(nd.type==='note'){
@@ -927,8 +1058,9 @@ function openEdit(id){
   document.getElementById('msav').onclick=()=>{
     const etitle=document.getElementById('etitle');
     if(etitle)nd.title=etitle.value.trim()||nd.title;
-    if(nd.type==='calories'){CAL_ROWS.forEach((r,i)=>{nd[`${r.id}Goal`]=parseFloat(document.getElementById('g'+i).value)||r.default||0;});}
-    else if(nd.type==='panel'){nd.value=parseFloat(document.getElementById('pval').value)||0;}
+    if(METRIC_TYPES.includes(nd.type)){
+      nd.goal=parseFloat(document.getElementById('g0').value)||0;
+    } else if(nd.type==='panel'){nd.value=parseFloat(document.getElementById('pval').value)||0;}
     else if(nd.type==='note'){nd.text=document.getElementById('ntext').value;}
     else if(nd.type==='water'){nd.value=parseFloat(document.getElementById('wval').value)||0;nd.goal=parseFloat(document.getElementById('wgoal').value)||2000;}
     else if(nd.type==='supplements'){nd.items=document.getElementById('sitems').value.split('\n').map(s=>s.trim()).filter(Boolean);nd.checked={};}
@@ -1034,18 +1166,53 @@ function doSnapshot(){
   S.nodes.filter(n=>n.type==='trackhistory').forEach(histNd=>{
     const inEdges=S.edges.filter(e=>e.to===histNd.id);
     if(!inEdges.length)return;
-    const metrics=inEdges.map(edge=>{
-      const srcId=edge.fp.replace('_out','');
-      const tp=TRACK_PORTS[srcId];if(!tp)return null;
-      const srcNd=S.nodes.find(n=>n.id===edge.from);if(!srcNd)return null;
-      const val=srcNd.type==='water'?srcNd.value||0:getNodeVal(srcNd,srcId);
-      const goal=getGoal(srcNd,srcId);
-      return`${val}${tp.unit} ${tp.label}${goal?` /${goal}${tp.unit}`:''}`;
-    }).filter(Boolean);
-    if(!metrics.length)return;
     if(!histNd.history)histNd.history=[];
+
+    // group entries: merge connections get section name, direct get flat
+    const sections={}; // sectionName -> [metric strings]
+
+    inEdges.forEach(edge=>{
+      const srcNd=S.nodes.find(n=>n.id===edge.from);if(!srcNd)return;
+
+      if(srcNd.type==='merge'){
+        const sectionName=srcNd.title||'Merge';
+        const mergeInEdges=S.edges.filter(e=>e.to===srcNd.id);
+        const metrics=mergeInEdges.map(me=>{
+          const metNd=S.nodes.find(n=>n.id===me.from);if(!metNd)return null;
+          if(METRIC_TYPES.includes(metNd.type)){
+            const tp=TRACK_PORTS[metNd.type];
+            return`${metNd.value||0}/${metNd.goal||0}${tp.unit} ${tp.label}`;
+          }
+          if(metNd.type==='supplements'){
+            const total=metNd.items?.length||0;
+            const done=Object.values(metNd.checked||{}).filter(Boolean).length;
+            return`${done}/${total} supplements`;
+          }
+          return null;
+        }).filter(Boolean);
+        if(metrics.length) sections[sectionName]=metrics;
+      } else if(METRIC_TYPES.includes(srcNd.type)){
+        // direct metric connection
+        const tp=TRACK_PORTS[srcNd.type];if(!tp)return;
+        const val=srcNd.value||0;
+        const goal=srcNd.goal||0;
+        const str=`${val}/${goal}${tp.unit} ${tp.label}`;
+        if(!sections[''])sections['']=[];
+        sections[''].push(str);
+      }
+    });
+
+    if(!Object.keys(sections).length)return;
+
+    // build entry lines
+    const lines=[];
+    Object.entries(sections).forEach(([section,metrics])=>{
+      if(section)lines.push(`[${section}]`);
+      metrics.forEach(m=>lines.push(m));
+    });
+
+    const entry={date:today,lines};
     const idx=histNd.history.findIndex(h=>h.date===today);
-    const entry={date:today,metrics};
     if(idx>=0)histNd.history[idx]=entry;else histNd.history.unshift(entry);
     histNd.history=histNd.history.slice(0,90);
   });
@@ -1053,14 +1220,8 @@ function doSnapshot(){
 }
 
 function doReset(){
-  // reset panels connected as cal inputs
-  S.nodes.filter(n=>n.type==='calories').forEach(cal=>{
-    S.edges.filter(e=>e.to===cal.id).forEach(e=>{
-      const p=S.nodes.find(n=>n.id===e.from&&n.type==='panel');if(p)p.value=0;
-    });
-  });
-  // reset water
-  S.nodes.filter(n=>n.type==='water').forEach(n=>{n.value=0;});
+  // reset all metric nodes
+  S.nodes.filter(n=>METRIC_TYPES.includes(n.type)).forEach(n=>{n.value=0;});
   // reset supplements
   S.nodes.filter(n=>n.type==='supplements').forEach(n=>{n.checked={};});
   saveS();render();toast('↻ reset');
@@ -1081,16 +1242,20 @@ loadS();
 buildChipbar();
 if(!S.nodes.length){
   S.nodes=[
-    {id:S.ctr++,type:'calories',title:'Calorie Balance',x:200,y:30,kcalGoal:2200,proteinGoal:150,carbsGoal:250,fatGoal:70},
-    {id:S.ctr++,type:'panel',title:'Panel',x:20,y:60,value:0},
-    {id:S.ctr++,type:'trackhistory',title:'Track History',x:450,y:30,history:[]},
+    {id:S.ctr++,type:'kcal',title:'kcal',x:30,y:30,value:0,goal:2200,defaultGoal:2200},
+    {id:S.ctr++,type:'protein',title:'protein',x:30,y:180,value:0,goal:150,defaultGoal:150},
+    {id:S.ctr++,type:'merge',title:'Merge',x:220,y:80},
+    {id:S.ctr++,type:'trackhistory',title:'Track History',x:400,y:80,history:[]},
   ];
   saveS();
 }
+// init lock button states (view mode = both locked)
+document.getElementById('lock-move').classList.toggle('locked',moveLocked);
+document.getElementById('lock-wire').classList.toggle('locked',wireLocked);
 render();
 scheduleReset();
 updateCompass();
-document.getElementById('hint').textContent='tap = interact';
+updateHint();
 </script>
 </body>
 </html>
