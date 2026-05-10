@@ -614,12 +614,15 @@ function buildPanel(nd,el){
 // ── NOTE ──────────────────────────────────
 function buildNote(nd,el){
   const body=document.createElement('div');body.className='note-body';
-  body.textContent=nd.text||'tap to edit...';
+  body.textContent=nd.text||'double-tap to edit...';
   body.style.cursor='text';
+  let _t=0;
   body.addEventListener('pointerup',e=>{
     if(mode!=='normal')return;
     e.stopPropagation();
-    openInlineText(nd,body);
+    const now=Date.now();
+    if(now-_t<320){openInlineText(nd,body);_t=0;}
+    else _t=now;
   });
   el.appendChild(body);
 }
