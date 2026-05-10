@@ -639,10 +639,13 @@ function buildMetric(nd,el){
     <div class="water-unit">goal: ${goal} ${tp.unit}</div>
     <div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:${pct}%;background:${fillColor}"></div></div>
   `;
+  let _metricTapT=0;
   body.querySelector('[data-metric-tap]').addEventListener('pointerup',e=>{
     if(mode!=='normal')return;
     e.stopPropagation();
-    openInlineNumber(nd,body.querySelector('[data-metric-tap]'),tp.unit,tp.color,false);
+    const now=Date.now();
+    if(now-_metricTapT<320){ openInlineNumber(nd,body.querySelector('[data-metric-tap]'),tp.unit,tp.color,false); _metricTapT=0; }
+    else _metricTapT=now;
   });
   el.appendChild(body);
 
