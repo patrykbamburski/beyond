@@ -979,7 +979,12 @@ function setupDragTap(el,nd){
   el.addEventListener('pointerup',e=>{
     clearTimeout(timer);
     if(dragging){el.classList.remove('dragging');saveS();}
-    else if(!moved&&mode==='edit')openEdit(nd.id);
+    else if(!moved&&mode==='edit'){
+      const now=Date.now();
+      if(!nd._lastTap)nd._lastTap=0;
+      if(now-nd._lastTap<320){openEdit(nd.id);nd._lastTap=0;}
+      else nd._lastTap=now;
+    }
     dragging=false;
   });
   el.addEventListener('pointercancel',()=>{clearTimeout(timer);el.classList.remove('dragging');dragging=false;});
