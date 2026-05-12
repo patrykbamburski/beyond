@@ -1288,24 +1288,7 @@ function buildBox(nd,el){
     childEl.style.borderRadius='0';
     slot.appendChild(childEl);
 
-    // drag to eject in edit mode
     slot.style.position='relative';
-    let ejecting=false,ejectMoved=false,eSX=0,eSY=0;
-    slot.addEventListener('pointerdown',e=>{
-      if(mode!=='edit')return;
-      e.stopPropagation();
-      ejecting=true;ejectMoved=false;eSX=e.clientX;eSY=e.clientY;
-    },{passive:false});
-    slot.addEventListener('pointermove',e=>{
-      if(!ejecting)return;
-      const dx=e.clientX-eSX,dy=e.clientY-eSY;
-      if(Math.abs(dx)>12||Math.abs(dy)>12){
-        ejectMoved=true;ejecting=false;
-        ejectFromBox(nd.id,childId);
-      }
-    },{passive:false});
-    slot.addEventListener('pointerup',()=>{ejecting=false;});
-    slot.addEventListener('pointercancel',()=>{ejecting=false;});
 
     slots.appendChild(slot);
   });
