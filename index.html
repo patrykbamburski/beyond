@@ -1383,8 +1383,9 @@ function openEdit(id){
     fields=children.length?`
       <div class="msection">contents</div>
       ${children.map(c=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--b);font-family:var(--mono);font-size:12px;color:var(--t2);">
-          <span>${ICONS[c.type]||'□'} ${c.title}</span>
+        <div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--b);font-family:var(--mono);font-size:12px;color:var(--t2);">
+          <span style="flex:1">${ICONS[c.type]||'□'} ${c.title}</span>
+          <button class="mb" style="flex:none;padding:4px 10px;font-size:11px;" data-edit-child="${c.id}">✎</button>
           <button class="mb" style="flex:none;padding:4px 10px;font-size:11px;" data-eject="${c.id}">eject</button>
         </div>`).join('')}
     `:'';
@@ -1422,6 +1423,15 @@ function openEdit(id){
       const childId=parseInt(btn.dataset.eject);
       ejectFromBox(id,childId);
       closeEdit();
+    });
+  });
+  // box edit-child buttons
+  ov.querySelectorAll('[data-edit-child]').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const childId=parseInt(btn.dataset.editChild);
+      closeEdit();
+      openEdit(childId);
     });
   });
   document.getElementById('msav').onclick=()=>{
