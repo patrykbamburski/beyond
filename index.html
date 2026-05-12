@@ -103,6 +103,33 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:system-ui
 /* NOTE */
 .note-body{padding:10px 12px;font-family:var(--mono);font-size:11px;color:var(--t2);line-height:1.6;white-space:pre-wrap;min-height:60px;}
 
+/* BOX */
+.box-node{min-width:240px;background:var(--bg) !important;}
+.box-slots{padding:8px;}
+.box-slot{
+  border:1px solid var(--b2);border-radius:8px;
+  margin-bottom:6px;overflow:hidden;
+  transition:border-color .15s,box-shadow .15s;
+}
+.box-slot:last-child{margin-bottom:0;}
+.box-slot.drag-over{
+  border-color:var(--blue);
+  box-shadow:0 0 0 2px var(--bbg);
+}
+.box-slot-empty{
+  border:1.5px dashed var(--b2);border-radius:8px;
+  height:36px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:10px;color:var(--t3);
+  margin-bottom:0;transition:border-color .15s,background .15s;
+}
+.box-slot-empty.drag-over{
+  border-color:var(--blue);background:var(--bbg);color:var(--blue);
+}
+.box-slot-inner{pointer-events:auto;}
+/* hide node head chrome when inside box */
+.box-slot .nh{padding:7px 10px;}
+.box-slot .ndel{display:none;}
+
 /* WATER */
 .water-body{padding:10px 12px 10px 18px;position:relative;}
 .water-big{font-family:var(--mono);font-size:26px;font-weight:500;color:#185fa5;line-height:1;text-align:center;}
@@ -280,6 +307,7 @@ const KUWETY = [
       {type:'panel',  icon:'□',  label:'Panel'},
       {type:'note',   icon:'✏️', label:'Note'},
       {type:'merge',  icon:'⇒',  label:'Merge'},
+      {type:'box',    icon:'▣',  label:'Box'},
     ]
   },
   {
@@ -531,6 +559,8 @@ function getEdgeColor(edge){
 // ══════════════════════════════════════════
 // MAKE PORT ELEMENT
 // ══════════════════════════════════════════
+let _buildingInBox=false;
+
 function mkPort(side,portKey,color,linked,nd){
   const p=document.createElement('div');
   p.className=`port p-${side==='in'?'left':'right'}${linked?' linked':''}`;
@@ -538,14 +568,16 @@ function mkPort(side,portKey,color,linked,nd){
   if(linked)p.style.background=color+'22';
   if(side==='in') p.dataset.tp=portKey;
   else p.dataset.fp=portKey;
-  setupPortEl(p,nd,side,portKey);
+  // hide ports of nodes inside a box
+  if(_buildingInBox) p.style.display='none';
+  else setupPortEl(p,nd,side,portKey);
   return p;
 }
 
 // ══════════════════════════════════════════
 // BUILD NODE
 // ══════════════════════════════════════════
-const ICONS={kcal:'🔥',protein:'💪',carbs:'🌾',fat:'🥑',water:'💧',panel:'□',note:'✏️',supplements:'💊',merge:'⇒',trackhistory:'📋'};
+const ICONS={kcal:'🔥',protein:'💪',carbs:'🌾',fat:'🥑',water:'💧',panel:'□',note:'✏️',supplements:'💊',merge:'⇒',trackhistory:'📋',box:'▣'};
 
 function buildNodeEl(nd){
   const el=document.createElement('div');
@@ -560,6 +592,7 @@ function buildNodeEl(nd){
   else if(nd.type==='supplements') buildSupps(nd,el);
   else if(nd.type==='merge')  buildMerge(nd,el);
   else if(nd.type==='trackhistory') buildTrackHistory(nd,el);
+  else if(nd.type==='box') buildBox(nd,el);
   setupDragTap(el,nd);
   return el;
 }
@@ -812,6 +845,7 @@ function buildTrackHistory(nd,el){
     if(METRIC_TYPES.includes(srcNd.type)){color=TRACK_PORTS[srcNd.type]?.color||'#888';}
     else if(srcNd.type==='merge'){color='#888780';}
     else if(srcNd.type==='supplements'){color='#534ab7';}
+    else if(srcNd.type==='box'){color='#888780';}
     const row=document.createElement('div');row.className='hist-in-row';
     row.innerHTML=`<span class="hist-in-label" style="color:${color}">${label}</span>`;
     // CRITICAL: data-tp must equal edge.tp exactly
@@ -950,6 +984,19 @@ function tryConnect(from,to){
     saveS();render();toast('✓ connected');return;
   }
 
+  // BOX out → MERGE in
+  if(fNd.type==='box'&&fPt==='box_out'&&tNd.type==='merge'){
+    if(S.edges.find(e=>e.from===fNd.id&&e.to===tNd.id)){toast('already connected');return;}
+    S.edges.push({from:fNd.id,fp:'box_out',to:tNd.id,tp:'box_merge_in_'+fNd.id});
+    saveS();render();toast('✓ connected');return;
+  }
+  // BOX out → TRACK HISTORY in
+  if(fNd.type==='box'&&fPt==='box_out'&&tNd.type==='trackhistory'){
+    if(S.edges.find(e=>e.from===fNd.id&&e.to===tNd.id)){toast('already connected');return;}
+    S.edges.push({from:fNd.id,fp:'box_out',to:tNd.id,tp:'box_hist_in_'+fNd.id});
+    saveS();render();toast('✓ connected');return;
+  }
+
   toast('invalid connection');
 }
 
@@ -957,6 +1004,7 @@ function tryConnect(from,to){
 // DRAG + TAP
 // ══════════════════════════════════════════
 const LONG=220;
+let _lastPX=0,_lastPY=0;
 function setupDragTap(el,nd){
   let timer=null,dragging=false,moved=false,sx=0,sy=0,nx0=0,ny0=0;
   el.addEventListener('pointerdown',e=>{
@@ -965,7 +1013,7 @@ function setupDragTap(el,nd){
     sx=e.clientX;sy=e.clientY;nx0=nd.x;ny0=nd.y;moved=false;dragging=false;
     if(moveLocked)return; // blocked when move locked
     timer=setTimeout(()=>{
-      dragging=true;el.classList.add('dragging');
+      dragging=true;el.classList.add('dragging');el.style.pointerEvents='none';
       try{el.setPointerCapture(e.pointerId);}catch(err){}
     },LONG);
   },{passive:false});
@@ -974,11 +1022,26 @@ function setupDragTap(el,nd){
     if(Math.abs(dx)>5||Math.abs(dy)>5)moved=true;
     if(!dragging)return;
     nd.x=nx0+dx/SC;nd.y=ny0+dy/SC;
-    el.style.left=nd.x+'px';el.style.top=nd.y+'px';drawEdges();
+    el.style.left=nd.x+'px';el.style.top=nd.y+'px';
+    _lastPX=e.clientX;_lastPY=e.clientY;
+    // highlight box slots on hover
+    document.querySelectorAll('.box-slot-empty').forEach(s=>{
+      const r=s.getBoundingClientRect();
+      const over=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
+      s.classList.toggle('drag-over',over);
+    });
+    drawEdges();
   },{passive:false});
   el.addEventListener('pointerup',e=>{
     clearTimeout(timer);
-    if(dragging){el.classList.remove('dragging');saveS();}
+    if(dragging){
+      el.classList.remove('dragging');el.style.pointerEvents='';
+      document.querySelectorAll('.box-slot-empty').forEach(s=>s.classList.remove('drag-over'));
+      // use event coords if available, fallback to tracked last position
+      const px=e.clientX||_lastPX||0;
+      const py=e.clientY||_lastPY||0;
+      if(!checkBoxDrop(nd,px,py)) saveS();
+    }
     else if(!moved&&mode==='edit'){
       const now=Date.now();
       if(!nd._lastTap)nd._lastTap=0;
@@ -995,7 +1058,13 @@ function setupDragTap(el,nd){
 // ══════════════════════════════════════════
 function render(){
   const cnt=document.getElementById('cvnodes');cnt.innerHTML='';
-  S.nodes.forEach(nd=>cnt.appendChild(buildNodeEl(nd)));
+  // collect node IDs that are inside boxes
+  const inBox=new Set();
+  S.nodes.filter(n=>n.type==='box').forEach(b=>(b.children||[]).forEach(id=>inBox.add(id)));
+  S.nodes.forEach(nd=>{
+    if(inBox.has(nd.id))return; // rendered inside box
+    cnt.appendChild(buildNodeEl(nd));
+  });
   drawEdges();
 }
 
@@ -1019,6 +1088,7 @@ function addNodeAt(type,x,y){
   else if(type==='merge'){nd.title='Merge';}
   else if(type==='supplements'){nd.title='Supplements';nd.items=['Vitamin D','Magnesium','Omega-3','Zinc','B12'];nd.checked={};}
   else if(type==='trackhistory'){nd.title='Track History';nd.history=[];}
+  else if(type==='box'){nd.title='Box';nd.children=[];}
   S.nodes.push(nd);saveS();render();
 }
 
@@ -1192,6 +1262,109 @@ function openInlineText(nd, displayEl){
   ta.addEventListener('keydown',e=>{if(e.key==='Escape')commit();});
 }
 
+// ── BOX NODE ──────────────────────────────
+function buildBox(nd,el){
+  el.classList.add('box-node');
+  const children=nd.children||[];
+
+  const slots=document.createElement('div');slots.className='box-slots';
+
+  // render each child node inside a slot
+  children.forEach((childId,i)=>{
+    const child=S.nodes.find(n=>n.id===childId);
+    if(!child)return;
+    const slot=document.createElement('div');slot.className='box-slot';
+    slot.dataset.slotIdx=i;
+
+    // build child node el (without drag/tap since it's inside box)
+    _buildingInBox=true;
+    const childEl=buildNodeEl(child);
+    _buildingInBox=false;
+    childEl.style.position='static';
+    childEl.style.width='100%';
+    childEl.style.boxShadow='none';
+    childEl.style.border='none';
+    childEl.style.borderRadius='0';
+    slot.appendChild(childEl);
+
+    // remove button inside box to eject
+    const ejectBtn=document.createElement('button');
+    ejectBtn.style.cssText='position:absolute;top:6px;right:6px;font-size:11px;font-family:var(--mono);background:none;border:1px solid var(--b2);border-radius:5px;padding:1px 6px;cursor:pointer;color:var(--t3);z-index:30;';
+    ejectBtn.textContent='eject';
+    ejectBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      ejectFromBox(nd.id,childId);
+    });
+    slot.style.position='relative';
+    slot.appendChild(ejectBtn);
+
+    slots.appendChild(slot);
+  });
+
+  // empty drop slot
+  const emptySlot=document.createElement('div');
+  emptySlot.className='box-slot-empty';
+  emptySlot.textContent='+ drop component here';
+  emptySlot.dataset.boxId=nd.id;
+  slots.appendChild(emptySlot);
+
+  el.appendChild(slots);
+
+  // OUT port
+  const outLinked=S.edges.some(e=>e.from===nd.id&&e.fp==='box_out');
+  const outp=mkPort('out','box_out','#888780',outLinked,nd);
+  outp.style.top='50%';outp.style.marginTop='calc(var(--port-size,20px)/-2)';
+  el.appendChild(outp);
+}
+
+function ejectFromBox(boxId,childId){
+  const box=S.nodes.find(n=>n.id===boxId);if(!box)return;
+  box.children=(box.children||[]).filter(id=>id!==childId);
+  // place ejected node near box
+  const child=S.nodes.find(n=>n.id===childId);
+  if(child){child.x=(box.x||0)+20;child.y=(box.y||0)+200;}
+  saveS();render();
+}
+
+// ── BOX DRAG-OVER DETECTION ─────────────
+let dragOverBox=null;
+
+function setupBoxDrop(){
+  // called after render – attach dragover listeners to empty slots
+  document.querySelectorAll('.box-slot-empty').forEach(slot=>{
+    slot.addEventListener('touchenter',()=>slot.classList.add('drag-over'),{passive:true});
+  });
+}
+
+// Override setupDragTap to detect box drop on pointerup
+// We check if finger is over a .box-slot-empty when releasing a drag
+
+function checkBoxDrop(nd,screenX,screenY){
+  if(!screenX&&!screenY)return false;
+  // elementsFromPoint gets ALL elements at position, including those under the dragged node
+  const els=document.elementsFromPoint?document.elementsFromPoint(screenX,screenY):[document.elementFromPoint(screenX,screenY)];
+  let slot=null;
+  for(const el of els){
+    if(!el)continue;
+    if(el.classList.contains('box-slot-empty')){slot=el;break;}
+    const s=el.closest?.('.box-slot-empty');
+    if(s){slot=s;break;}
+  }
+  if(!slot)return false;
+  const boxId=parseInt(slot.dataset.boxId);
+  if(isNaN(boxId))return false;
+  const box=S.nodes.find(n=>n.id===boxId);
+  if(!box||boxId===nd.id)return false;
+  if(!box.children)box.children=[];
+  if(box.children.includes(nd.id))return false;
+  box.children.push(nd.id);
+  nd._inBox=boxId;
+  // clear drag-over highlight
+  document.querySelectorAll('.box-slot-empty').forEach(s=>s.classList.remove('drag-over'));
+  saveS();render();
+  return true;
+}
+
 function openEdit(id){
   const nd=S.nodes.find(n=>n.id===id);if(!nd)return;
   const ov=document.createElement('div');ov.className='ov';
@@ -1211,7 +1384,7 @@ function openEdit(id){
   // name editable only for panel when not connected, and for note
   const outEdge=S.edges.find(e=>e.from===nd.id);
   const inEdge=S.edges.find(e=>e.to===nd.id&&e.tp==='panel_in');
-  const nameEditable=(nd.type==='panel'&&!outEdge&&!inEdge)||(nd.type==='note');
+  const nameEditable=(nd.type==='panel'&&!outEdge&&!inEdge)||(nd.type==='note')||(nd.type==='box');
   const nameField=nameEditable
     ? `<label class="ml">name</label><input class="mi" id="etitle" value="${nd.title||''}">`
     : `<label class="ml">name</label><div style="font-family:var(--mono);font-size:13px;color:var(--t2);padding:10px 12px;border:1px solid var(--b);border-radius:8px;background:var(--bg)">${nd.title||''}</div>`;
@@ -1351,8 +1524,24 @@ function doSnapshot(){
           return null;
         }).filter(Boolean);
         if(metrics.length) sections[sectionName]=metrics;
+      } else if(srcNd.type==='box'){
+        const sectionName=srcNd.title||'Box';
+        const lines=[];
+        (srcNd.children||[]).forEach(childId=>{
+          const ch=S.nodes.find(n=>n.id===childId);if(!ch)return;
+          if(METRIC_TYPES.includes(ch.type)){
+            const tp=TRACK_PORTS[ch.type];
+            lines.push(`${ch.value||0}/${ch.goal||0}${tp.unit} ${tp.label}`);
+          } else if(ch.type==='supplements'){
+            const total=ch.items?.length||0;
+            const done=Object.values(ch.checked||{}).filter(Boolean).length;
+            lines.push(`${done}/${total} supplements`);
+          } else if(ch.type==='note'){
+            if(ch.text)lines.push(ch.text.slice(0,40)+(ch.text.length>40?'…':''));
+          }
+        });
+        if(lines.length)sections[sectionName]=lines;
       } else if(METRIC_TYPES.includes(srcNd.type)){
-        // direct metric connection
         const tp=TRACK_PORTS[srcNd.type];if(!tp)return;
         const val=srcNd.value||0;
         const goal=srcNd.goal||0;
