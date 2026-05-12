@@ -194,6 +194,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:system-ui
 .mita{width:100%;padding:10px 12px;border:1px solid var(--b2);border-radius:8px;font-family:var(--mono);font-size:13px;color:var(--t);background:var(--bg);outline:none;min-height:80px;resize:vertical;}
 .mi:focus,.mita:focus{border-color:var(--t3);}
 .mf{display:flex;gap:8px;margin-top:14px;}
+.msection{font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 6px;}
 .mb{flex:1;padding:12px;border-radius:9px;font-family:var(--mono);font-size:12px;cursor:pointer;border:1px solid var(--b2);background:var(--bg);color:var(--t2);}
 .mb.p{background:var(--t);color:var(--s);border-color:var(--t);}
 .mb.d{color:#b83232;border-color:#f0c0bc;background:#fdf5f5;}
@@ -593,7 +594,7 @@ function buildNodeEl(nd){
   else if(nd.type==='merge')  buildMerge(nd,el);
   else if(nd.type==='trackhistory') buildTrackHistory(nd,el);
   else if(nd.type==='box') buildBox(nd,el);
-  setupDragTap(el,nd);
+  if(!_buildingInBox) setupDragTap(el,nd);
   return el;
 }
 
@@ -1287,16 +1288,24 @@ function buildBox(nd,el){
     childEl.style.borderRadius='0';
     slot.appendChild(childEl);
 
-    // remove button inside box to eject
-    const ejectBtn=document.createElement('button');
-    ejectBtn.style.cssText='position:absolute;top:6px;right:6px;font-size:11px;font-family:var(--mono);background:none;border:1px solid var(--b2);border-radius:5px;padding:1px 6px;cursor:pointer;color:var(--t3);z-index:30;';
-    ejectBtn.textContent='eject';
-    ejectBtn.addEventListener('click',e=>{
-      e.stopPropagation();
-      ejectFromBox(nd.id,childId);
-    });
+    // drag to eject in edit mode
     slot.style.position='relative';
-    slot.appendChild(ejectBtn);
+    let ejecting=false,ejectMoved=false,eSX=0,eSY=0;
+    slot.addEventListener('pointerdown',e=>{
+      if(mode!=='edit')return;
+      e.stopPropagation();
+      ejecting=true;ejectMoved=false;eSX=e.clientX;eSY=e.clientY;
+    },{passive:false});
+    slot.addEventListener('pointermove',e=>{
+      if(!ejecting)return;
+      const dx=e.clientX-eSX,dy=e.clientY-eSY;
+      if(Math.abs(dx)>12||Math.abs(dy)>12){
+        ejectMoved=true;ejecting=false;
+        ejectFromBox(nd.id,childId);
+      }
+    },{passive:false});
+    slot.addEventListener('pointerup',()=>{ejecting=false;});
+    slot.addEventListener('pointercancel',()=>{ejecting=false;});
 
     slots.appendChild(slot);
   });
@@ -1369,7 +1378,17 @@ function openEdit(id){
   const nd=S.nodes.find(n=>n.id===id);if(!nd)return;
   const ov=document.createElement('div');ov.className='ov';
   let fields='';
-  if(METRIC_TYPES.includes(nd.type)){
+  if(nd.type==='box'){
+    const children=(nd.children||[]).map(id=>S.nodes.find(n=>n.id===id)).filter(Boolean);
+    fields=children.length?`
+      <div class="msection">contents</div>
+      ${children.map(c=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--b);font-family:var(--mono);font-size:12px;color:var(--t2);">
+          <span>${ICONS[c.type]||'□'} ${c.title}</span>
+          <button class="mb" style="flex:none;padding:4px 10px;font-size:11px;" data-eject="${c.id}">eject</button>
+        </div>`).join('')}
+    `:'';
+  } else if(METRIC_TYPES.includes(nd.type)){
     const tp=TRACK_PORTS[nd.type];
     fields=`<label class="ml">goal (${tp.unit})</label><input class="mi" id="g0" type="number" value="${nd.goal||0}" inputmode="decimal">`;
   } else if(nd.type==='panel'){
@@ -1396,6 +1415,15 @@ function openEdit(id){
   ov.addEventListener('click',e=>{if(e.target===ov)closeEdit();});
   document.getElementById('mcan').onclick=closeEdit;
   document.getElementById('mdel').onclick=()=>{deleteNode(id);closeEdit();};
+  // box eject buttons
+  ov.querySelectorAll('[data-eject]').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const childId=parseInt(btn.dataset.eject);
+      ejectFromBox(id,childId);
+      closeEdit();
+    });
+  });
   document.getElementById('msav').onclick=()=>{
     const etitle=document.getElementById('etitle');
     if(etitle)nd.title=etitle.value.trim()||nd.title;
