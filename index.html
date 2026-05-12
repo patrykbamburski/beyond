@@ -136,12 +136,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:system-ui
 .ov.fullscreen{background:none;align-items:stretch;}
 .ov.fullscreen .modal{
   border-radius:0;max-height:100dvh;height:100dvh;
-  display:flex;flex-direction:column;padding:0;
+  display:flex;flex-direction:column;padding:0;overflow:hidden;
 }
 .note-fs-bar{
   display:flex;align-items:center;justify-content:space-between;
   padding:12px 16px;border-bottom:1px solid var(--b);
   flex-shrink:0;background:var(--s);
+  position:sticky;top:0;z-index:10;
 }
 .note-fs-title{font-family:var(--mono);font-size:12px;color:var(--t3);letter-spacing:.05em;}
 .note-fs-done{
@@ -151,11 +152,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:system-ui
 }
 .note-fs-ta{
   flex:1;width:100%;
-  padding:16px;
+  padding:16px 16px 32px;
   font-family:var(--mono);font-size:14px;line-height:1.8;
   color:var(--t);background:var(--s);
   border:none;outline:none;resize:none;
   -webkit-appearance:none;
+  overflow-y:auto;
+  min-height:0;
 }
 .dh{width:32px;height:4px;background:var(--b2);border-radius:2px;margin:0 auto 14px;}
 .ml{font-family:var(--mono);font-size:10px;color:var(--t3);display:block;margin:10px 0 4px;letter-spacing:.04em;}
