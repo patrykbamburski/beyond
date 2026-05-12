@@ -132,6 +132,31 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:system-ui
 /* OVERLAY / MODAL */
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;display:flex;align-items:flex-end;}
 .modal{background:var(--s);border-radius:16px 16px 0 0;width:100%;padding:14px 16px 44px;max-height:85dvh;overflow-y:auto;}
+/* Fullscreen note modal */
+.ov.fullscreen{background:none;align-items:stretch;}
+.ov.fullscreen .modal{
+  border-radius:0;max-height:100dvh;height:100dvh;
+  display:flex;flex-direction:column;padding:0;
+}
+.note-fs-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-bottom:1px solid var(--b);
+  flex-shrink:0;background:var(--s);
+}
+.note-fs-title{font-family:var(--mono);font-size:12px;color:var(--t3);letter-spacing:.05em;}
+.note-fs-done{
+  font-family:var(--mono);font-size:12px;
+  background:var(--t);color:var(--s);border:none;
+  padding:6px 16px;border-radius:20px;cursor:pointer;
+}
+.note-fs-ta{
+  flex:1;width:100%;
+  padding:16px;
+  font-family:var(--mono);font-size:14px;line-height:1.8;
+  color:var(--t);background:var(--s);
+  border:none;outline:none;resize:none;
+  -webkit-appearance:none;
+}
 .dh{width:32px;height:4px;background:var(--b2);border-radius:2px;margin:0 auto 14px;}
 .ml{font-family:var(--mono);font-size:10px;color:var(--t3);display:block;margin:10px 0 4px;letter-spacing:.04em;}
 .ml:first-of-type{margin-top:0;}
@@ -1132,24 +1157,31 @@ function openInlineNumber(nd, displayEl, unit, color, isWater=false){
 }
 
 function openInlineText(nd, displayEl){
-  const ta=document.createElement('textarea');
-  ta.value=nd.text||'';
-  ta.style.cssText=`
-    width:100%;font-family:var(--mono);font-size:11px;color:var(--t2);
-    line-height:1.6;border:none;outline:none;background:transparent;
-    resize:none;padding:0;margin:0;min-height:60px;
+  // fullscreen note editor
+  const ov=document.createElement('div');
+  ov.className='ov fullscreen';
+  ov.innerHTML=`
+    <div class="modal">
+      <div class="note-fs-bar">
+        <span class="note-fs-title">${nd.title||'Note'}</span>
+        <button class="note-fs-done" id="nfs-done">done</button>
+      </div>
+      <textarea class="note-fs-ta" id="nfs-ta" placeholder="Start writing...">${nd.text||''}</textarea>
+    </div>
   `;
-  displayEl.replaceWith(ta);
+  document.body.appendChild(ov);
+  const ta=document.getElementById('nfs-ta');
   ta.focus();
-  // auto-resize
-  ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';
-  ta.addEventListener('input',()=>{ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';});
+  // put cursor at end
+  ta.selectionStart=ta.selectionEnd=ta.value.length;
 
   function commit(){
-    nd.text=ta.value;saveS();render();
+    nd.text=ta.value;saveS();
+    ov.remove();
+    render();
   }
-  ta.addEventListener('blur',commit);
-  ta.addEventListener('keydown',e=>{if(e.key==='Escape')ta.blur();});
+  document.getElementById('nfs-done').addEventListener('click',commit);
+  ta.addEventListener('keydown',e=>{if(e.key==='Escape')commit();});
 }
 
 function openEdit(id){
